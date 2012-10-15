@@ -42,6 +42,12 @@
 namespace kinematics_planner
 {
 
+bool KinematicsPlanner::checkRequest(const std::map<std::string,geometry_msgs::PoseStamped> &request) const
+{
+  /* FIXME */
+  return true;
+}
+
 
 bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStamped> &start_request,
                               const std::map<std::string,geometry_msgs::PoseStamped> &goal_request,
@@ -64,6 +70,7 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
                               moveit_msgs::RobotTrajectory &robot_trajectory,
                               moveit_msgs::MoveItErrorCodes &error_code) const
 {
+  /*
   ros::WallTime start_time = ros::WallTime::now();  
   if(!checkRequest(start_request) || !checkRequest(goal_request))
   {
@@ -136,13 +143,15 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
     }  
     elapsed_time = ros::WallTime::now()-start_time;
   }
+  */
   return false;    
 }
 
 moveit_msgs::RobotTrajectory KinematicsPlanner::getRobotTrajectory(const kinematics_planner::SolutionTrajectoryMap &solutions,
                                                                    unsigned int num_poses) const
 {
-  moveit_msgs::RobotTrajectory robot_trajectory;
+    moveit_msgs::RobotTrajectory robot_trajectory;
+  /*
   robot_trajectory.joint_trajectory.joint_names = joint_names_;
   robot_trajectory.joint_trajectory.points.resize(num_poses);
   for(unsigned int i=0; i < robot_trajectory.joint_trajectory.points.size(); ++i)
@@ -153,12 +162,14 @@ moveit_msgs::RobotTrajectory KinematicsPlanner::getRobotTrajectory(const kinemat
       robot_trajectory.joint_trajectory.points[i].positions.insert(robot_trajectory.joint_trajectory.points[i].positions.end(),group_solutions.begin(),group_solutions.end());      
     }    
   }   
+  */
   return robot_trajectory;  
 }
 
 std::map<std::string,std::vector<geometry_msgs::Pose> > KinematicsPlanner::getInterpolatedPosesMap(const std::map<std::string,geometry_msgs::PoseStamped> &start,
                                                                                                    const std::map<std::string,geometry_msgs::PoseStamped> &goal) const
 {
+  /*
   unsigned int num_segments = 0;  
   for(unsigned int i=0; i < group_names_.size(); ++i)
   {
@@ -166,13 +177,15 @@ std::map<std::string,std::vector<geometry_msgs::Pose> > KinematicsPlanner::getIn
     if(group_segments > num_segments)
       num_segments = group_segments;    
   }
+  */
 
   std::map<std::string,std::vector<geometry_msgs::Pose> > result;  
+  /*
   for(unsigned int i=0; i < group_names_.size(); ++i)
     result[group_names_[i]] = getInterpolatedPoses(start.find(group_names_[i])->second.pose,
                                                    goal.find(group_names_[i])->second.pose,
                                                    num_segments);
-  
+  */
   return result;  
 }
 

@@ -111,6 +111,8 @@ class KinematicsPlanner : public kinematics_planner::KinematicsSolver
     discretization_translation = discretization_translation_;
     discretization_rotation = discretization_rotation_;    
   }
+
+  bool checkRequest(const std::map<std::string,geometry_msgs::PoseStamped> &request) const;
         
 private:
 

@@ -20,3 +20,5 @@ msg/_.*\.py$
 .pydevproject
 _gtest_from_src
 collision_detection_fcl/cmake_install.cmake
+qtcreator-*
+CMakeLists.txt.user
