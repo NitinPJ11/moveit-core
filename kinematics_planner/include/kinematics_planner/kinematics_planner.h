@@ -54,7 +54,14 @@ class KinematicsPlanner : public kinematics_planner::KinematicsSolver
 {
   public:
 
-  KinematicsPlanner():KinematicsSolver(){}
+  KinematicsPlanner() : KinematicsSolver() {};
+
+  /** @brief Initiliaze data structures
+    * @param group_names Groups which will be planned for
+    * @param model Kinematic model of the robot
+    * @return False if initilization fails
+    */
+  bool initialize(const std::vector<std::string> &group_names, const planning_models::KinematicModelConstPtr &model);
 
   /** @brief Solve the planning problem
    * @param start_request A map from group names to desired start poses
@@ -133,7 +140,9 @@ private:
   unsigned int num_poses_;
 
   double discretization_translation_, discretization_rotation_;
-  
+
+  std::vector<std::string> group_names_;
+  KinematicsSolverConstPtr kinematics_solver_;
 };
 
 }

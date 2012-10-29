@@ -126,6 +126,7 @@ protected:
 };
 
 typedef boost::shared_ptr<KinematicsSolver> KinematicsSolverPtr;
+typedef boost::shared_ptr<const KinematicsSolver> KinematicsSolverConstPtr;
 
 }
 
