@@ -55,13 +55,10 @@ bool KinematicsPlanner::initialize(const std::vector<std::string> &group_names, 
     discretization_rotation_ = DISCRETIZATION_ROTATION;
 
     /* assumes that the KinematicsModel does not change once this object is created */
-    group_names_ = group_names;
-    for(unsigned int group_i = 0; group_i < group_names_.size(); group_i++)
-    {
-        KinematicsSolverPtr solver = boost::make_shared<KinematicsSolver>();
-        solver->initialize(model);
-        kinematics_solver_ = solver;
-    }
+    KinematicsSolverPtr solver = boost::make_shared<KinematicsSolver>();
+    solver->initialize(model);
+    kinematics_solver_ = solver;
+
     return true;
 }
 
@@ -156,6 +153,7 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
     kinematics_msgs::GetConstraintAwarePositionIK::Response response;
     request.ik_request.pose_stamped.header.frame_id = kinematic_state.getKinematicModel()->getModelFrame();
     request.ik_request.robot_state.joint_state.name = planning_scene->getKinematicModel()->getJointModelNames();
+    request.timeout = ros::Duration(1.0);
     planning_scene->getCurrentState().getStateValues(request.ik_request.robot_state.joint_state.position);
     request.constraints = kinematic_constraint_set.getAllConstraints();
 
@@ -167,7 +165,7 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
         for(group_iter = start_request.begin(); group_iter != start_request.end(); ++group_iter)
             joint_state_groups[group_iter->first]->setToRandomValues();
 
-        for(unsigned int pose_i = 0; pose_i < num_poses_; ++pose_i)
+        for(unsigned int pose_i = 0; pose_i < num_poses; ++pose_i)
         {
             for(group_iter = start_request.begin(); group_iter != start_request.end(); ++group_iter)
             {
@@ -183,6 +181,7 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
                 if(!kinematics_solver_->getIK(planning_scene, request, response))
                 {
                     success = false;
+                    ROS_INFO("Pose %d: IK Failed with error code %d", pose_i, response.error_code.val);
                     error_code.val = error_code.PLANNING_FAILED;
                     break;
                 }
@@ -195,15 +194,16 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
 
                 /* use the kinematic solution from this IK step as the seed for the next IK step. */
                 const std::vector<std::string> group_joint_names = joint_state_groups[group_name]->getJointNames();
-                for(unsigned int group_joint_i = 0; group_joint_i < group_joint_names.size(); group_joint_i++)
+                for(unsigned int response_joint_i = 0; response_joint_i < response.solution.joint_state.name.size(); response_joint_i++)
                 {
-                    const std::string joint_name = group_joint_names[group_joint_i];
+                    const std::string joint_name = response.solution.joint_state.name[response_joint_i];
                     const unsigned int joint_i = joint_indices_map.find(joint_name)->second;
-                    const double joint_val = response.solution.joint_state.position[joint_i];
+
+                    const double joint_val = response.solution.joint_state.position[response_joint_i];
                     request.ik_request.robot_state.joint_state.position[joint_i] = joint_val;
 
                     /* fill in solution */
-                    solutions[group_name][pose_i][group_joint_i] = joint_val;
+                    solutions[group_name][pose_i][response_joint_i] = joint_val;
                 }
             }
 
@@ -226,32 +226,38 @@ bool KinematicsPlanner::solve(const std::map<std::string,geometry_msgs::PoseStam
 
         if(success)
         {
-            robot_trajectory = getRobotTrajectory(solutions,num_poses);
+
+            /* populate the vector of joint names */
+            for(unsigned int group_i = 0; group_i < group_names.size(); group_i++)
+            {
+                const std::string group_name = group_names[group_i];
+                const std::vector<std::string> group_joint_names = joint_state_groups[group_name]->getJointNames();
+                for(unsigned int group_joint_i = 0; group_joint_i < group_joint_names.size(); group_joint_i++)
+                {
+                    const std::string joint_name = group_joint_names[group_joint_i];
+                    robot_trajectory.joint_trajectory.joint_names.push_back(joint_name);
+                }
+            }
+
+            /* fill in the joint values */
+            robot_trajectory.joint_trajectory.points.resize(num_poses);
+            ROS_INFO("Interpolated IK trajectory has %d points", num_poses);
+            for(unsigned int i = 0; i < robot_trajectory.joint_trajectory.points.size(); ++i)
+            {
+                ROS_INFO("Filling in point %d", i);
+                for(unsigned int group_i = 0; group_i < group_names.size(); group_i++)
+                {
+                    const std::string group_name = group_names[group_i];
+                    const std::vector<double>& group_solutions = (solutions.find(group_name)->second)[i];
+                    robot_trajectory.joint_trajectory.points[i].positions.insert(robot_trajectory.joint_trajectory.points[i].positions.end(), group_solutions.begin(), group_solutions.end());
+                }
+            }
             return true;
         }
         elapsed_time = ros::WallTime::now()-start_time;
     }
 
     return false;
-}
-
-moveit_msgs::RobotTrajectory KinematicsPlanner::getRobotTrajectory(const kinematics_planner::SolutionTrajectoryMap &solutions,
-                                                                   unsigned int num_poses) const
-{
-    moveit_msgs::RobotTrajectory robot_trajectory;
-    /*
-  robot_trajectory.joint_trajectory.joint_names = joint_names_;
-  robot_trajectory.joint_trajectory.points.resize(num_poses);
-  for(unsigned int i=0; i < robot_trajectory.joint_trajectory.points.size(); ++i)
-  {
-    for(unsigned int j=0; j < num_groups_; ++j)
-    {
-      const std::vector<double>& group_solutions = (solutions.find(group_names_[j])->second)[i];
-      robot_trajectory.joint_trajectory.points[i].positions.insert(robot_trajectory.joint_trajectory.points[i].positions.end(),group_solutions.begin(),group_solutions.end());
-    }
-  }
-  */
-    return robot_trajectory;
 }
 
 std::map<std::string, std::vector<geometry_msgs::Pose> > KinematicsPlanner::getInterpolatedPosesMap(const std::map<std::string,geometry_msgs::PoseStamped> &start,

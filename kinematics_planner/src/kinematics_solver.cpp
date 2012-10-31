@@ -160,8 +160,9 @@ bool KinematicsSolver::getIK(const planning_scene::PlanningSceneConstPtr &planni
                                            solutions.find(group_names[i])->second,
                                            response.error_code))
       {
-        success = false;
-        break;        
+          ROS_INFO("getPositionIK fialed with error code %d", response.error_code.val);
+          success = false;
+          break;
       }
       joint_state_groups[i]->setStateValues(solutions.find(group_names[i])->second);        
     }      

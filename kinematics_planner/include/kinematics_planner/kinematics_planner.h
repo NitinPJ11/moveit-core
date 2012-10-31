@@ -134,14 +134,13 @@ private:
                                                         const geometry_msgs::Pose &goal,
                                                         const unsigned int num_segments) const;
     
-  moveit_msgs::RobotTrajectory getRobotTrajectory(const  kinematics_planner::SolutionTrajectoryMap &solutions,
-                                                  unsigned int num_poses) const;
+  void getRobotTrajectory(const  kinematics_planner::SolutionTrajectoryMap &solutions,
+                          unsigned int num_poses,
+                          moveit_msgs::RobotTrajectory &robot_trajectory) const;
   
-  unsigned int num_poses_;
 
   double discretization_translation_, discretization_rotation_;
 
-  std::vector<std::string> group_names_;
   KinematicsSolverConstPtr kinematics_solver_;
 };
 
